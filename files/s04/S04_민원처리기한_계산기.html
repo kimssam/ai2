@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>민원 처리 기한 계산기</title>
+<style>
+:root{--bg:#eef1f5;--card:#fff;--ink:#0f1e3d;--sub:#5f6b80;--line:#dfe4ec;--blue:#0054a6;--sky:#e6eef7;--or:#f36f21;--red:#d93a3a;--green:#1f9d6b}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:"Malgun Gothic",system-ui,sans-serif;font-size:14px}
+header{background:var(--ink);color:#fff;padding:14px 24px;display:flex;align-items:center}
+header h1{font-size:18px;margin:0}header small{display:block;color:#a9b8d0;font-size:12px;font-weight:400}
+.tag{margin-left:auto;background:var(--or);font-size:12px;font-weight:700;padding:4px 10px;border-radius:12px}
+.wrap{max-width:1080px;margin:0 auto;padding:18px 24px 36px}
+.card{background:var(--card);border-radius:14px;padding:16px 18px;box-shadow:0 1px 2px #0001;margin-bottom:14px}
+.card h3{margin:0 0 10px;font-size:14px}
+form{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end}
+label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--sub);font-weight:600}
+input,select{font:inherit;padding:7px 9px;border:1px solid var(--line);border-radius:8px}
+button{font:inherit;border:0;background:var(--blue);color:#fff;padding:8px 14px;border-radius:8px;cursor:pointer;font-weight:600}
+button.gh{background:#fff;color:var(--blue);border:1px solid var(--blue)}
+.sum{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px}
+.sum div{background:var(--card);border-radius:14px;padding:12px 16px}.sum small{color:var(--sub);font-weight:600}.sum b{display:block;font-size:24px}
+table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:8px 6px;border-bottom:1px solid var(--line);text-align:left}th{color:var(--sub)}
+.st{font-size:12px;font-weight:700;padding:2px 8px;border-radius:10px;color:#fff}
+.note{font-size:12px;color:var(--sub)}
+</style></head><body>
+<header><div><h1>민원 처리 기한 계산기</h1><small>접수일과 처리기간을 넣으면 기한과 남은 일수를 계산 (주말·입력한 휴일 제외)</small></div><span class="tag">교육용 가상 자료</span></header>
+<div class="wrap">
+  <div class="card"><h3>민원 등록</h3>
+    <form id="f">
+      <label>접수 번호<input id="no" placeholder="예: 가상-001" required></label>
+      <label>민원 유형<select id="type"><option>질의</option><option>건의</option><option>고충</option><option>기타</option></select></label>
+      <label>접수일<input type="date" id="rcv" required></label>
+      <label>처리기간(근무일)<input type="number" id="days" min="1" max="60" value="7" required></label>
+      <button>추가</button>
+    </form>
+    <p class="note" style="margin:10px 0 0">※ 민원인 성명·연락처 등 개인정보는 입력하지 않습니다(입력 칸 없음). 처리기간 계산 방식은 교육용 가상 예시이며, 실제 법정 처리기간과 계산 기준은 「민원 처리에 관한 법률」 등 관계 법령으로 확인하십시오.</p>
+  </div>
+  <div class="card"><h3>제외할 휴일 <span class="note">(기관 휴무일을 직접 입력, 쉼표로 구분)</span></h3><input id="hol" style="width:100%" placeholder="YYYY-MM-DD"></div>
+  <div class="sum"><div><small>등록 민원</small><b id="sN">0</b></div><div><small>기한 3일 이내</small><b id="sS" style="color:var(--or)">0</b></div><div><small>기한 경과</small><b id="sL" style="color:var(--red)">0</b></div></div>
+  <div class="card"><h3>처리 현황 <span class="note">기준일 <input type="date" id="base" style="padding:3px 6px"></span></h3>
+    <table id="t"></table>
+    <div style="margin-top:10px;display:flex;gap:8px"><button class="gh" id="sample">가상 예시 불러오기</button><button class="gh" id="clear">전체 삭제</button></div>
+  </div>
+</div>
+<script>
+const $=id=>document.getElementById(id),KEY="minwon-demo";
+const p2=n=>String(n).padStart(2,"0"),iso=d=>`${d.getFullYear()}-${p2(d.getMonth()+1)}-${p2(d.getDate())}`,parse=s=>{const[y,m,d]=s.split("-").map(Number);return new Date(y,m-1,d)};
+const fmt=d=>`${d.getMonth()+1}. ${d.getDate()}.(${"일월화수목금토"[d.getDay()]})`;
+let L=[];try{L=JSON.parse(localStorage.getItem(KEY))||[]}catch(e){}
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(L))}catch(e){}};
+function hols(){return new Set($("hol").value.split(",").map(s=>s.trim()).filter(Boolean))}
+function isWork(d,H){return d.getDay()%6!==0&&!H.has(iso(d))}
+function due(rcv,days,H){let d=parse(rcv),n=0;while(n<days){d=new Date(d.getFullYear(),d.getMonth(),d.getDate()+1);if(isWork(d,H))n++}return d}
+function workLeft(from,to,H){let n=0,d=new Date(from);const s=to>=from?1:-1;while(iso(d)!==iso(to)){d=new Date(d.getFullYear(),d.getMonth(),d.getDate()+s);if(isWork(d,H))n+=s}return n}
+function render(){const H=hols(),base=parse($("base").value);let soon=0,late=0;
+  const rows=L.map(m=>{const du=due(m.rcv,m.days,H),left=m.done?null:workLeft(base,du,H);if(left!==null&&left<0)late++;else if(left!==null&&left<=3)soon++;return{...m,du,left}}).sort((a,b)=>a.du-b.du);
+  $("sN").textContent=L.length;$("sS").textContent=soon;$("sL").textContent=late;
+  $("t").innerHTML="<tr><th>접수 번호</th><th>유형</th><th>접수일</th><th>처리기간</th><th>처리 기한</th><th>남은 근무일</th><th>상태</th><th></th></tr>"+rows.map(m=>{
+    const st=m.done?["완료","var(--green)"]:m.left<0?["기한 경과","var(--red)"]:m.left<=3?["임박","var(--or)"]:["진행","var(--blue)"];
+    return `<tr><td>${m.no}</td><td>${m.type}</td><td>${fmt(parse(m.rcv))}</td><td>${m.days}일</td><td><b>${fmt(m.du)}</b></td><td>${m.done?"-":m.left}</td><td><span class="st" style="background:${st[1]}">${st[0]}</span></td><td><button class="gh" data-i="${m.id}" style="padding:4px 8px">${m.done?"되돌리기":"완료"}</button></td></tr>`}).join("")||"<tr><td colspan=8 class=note>등록된 민원이 없습니다.</td></tr>"}
+$("f").onsubmit=e=>{e.preventDefault();L.push({id:Date.now(),no:$("no").value,type:$("type").value,rcv:$("rcv").value,days:+$("days").value,done:false});save();$("no").value="";render()};
+$("t").onclick=e=>{const b=e.target.closest("button[data-i]");if(!b)return;const m=L.find(x=>x.id==b.dataset.i);m.done=!m.done;save();render()};
+$("sample").onclick=()=>{L=[["가상-001","질의","2026-09-21",7],["가상-002","건의","2026-09-14",14],["가상-003","고충","2026-09-24",7],["가상-004","기타","2026-09-28",3],["가상-005","질의","2026-09-10",7]].map((x,i)=>({id:Date.now()+i,no:x[0],type:x[1],rcv:x[2],days:x[3],done:i===4}));save();render()};
+$("clear").onclick=()=>{if(confirm("전체 삭제할까요?")){L=[];save();render()}};
+$("hol").oninput=render;$("base").onchange=render;
+const t=new Date();$("rcv").value=iso(t);$("base").value=iso(new Date(2026,9,1));render();
+</script></body></html>
