@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>우주구 예산 집행률 대시보드</title>
+<style>
+:root{--bg:#eef1f5;--card:#fff;--ink:#0f1e3d;--sub:#5f6b80;--line:#dfe4ec;--blue:#0054a6;--sky:#e6eef7;--or:#f36f21;--red:#d93a3a;--green:#1f9d6b}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:"Malgun Gothic",system-ui,sans-serif;font-size:14px}
+header{background:var(--ink);color:#fff;padding:14px 24px;display:flex;align-items:center;gap:14px}
+header h1{font-size:18px;margin:0}header small{display:block;color:#a9b8d0;font-size:12px;font-weight:400}
+.tag{margin-left:auto;background:var(--or);font-size:12px;font-weight:700;padding:4px 10px;border-radius:12px}
+.wrap{max-width:1180px;margin:0 auto;padding:18px 24px 36px}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px}
+.kpi{background:var(--card);border-radius:14px;padding:14px 18px;box-shadow:0 1px 2px #0001}
+.kpi small{color:var(--sub);font-weight:600}.kpi b{display:block;font-size:26px;margin-top:4px}.kpi b em{font-size:13px;font-style:normal;color:var(--sub);margin-left:3px}
+.grid{display:grid;grid-template-columns:1.5fr 1fr;gap:14px}
+.card{background:var(--card);border-radius:14px;padding:18px;box-shadow:0 1px 2px #0001}
+.card h3{margin:0 0 12px;font-size:14px;display:flex;justify-content:space-between}.card h3 span{font-size:12px;color:var(--sub);font-weight:500}
+.row{display:grid;grid-template-columns:96px 1fr 60px;gap:10px;align-items:center;margin:9px 0;cursor:pointer}
+.row .tr{height:16px;background:var(--line);border-radius:8px;position:relative;overflow:hidden}
+.row .tr i{position:absolute;left:0;top:0;bottom:0;border-radius:8px;width:0;transition:width .8s cubic-bezier(.2,.8,.2,1)}
+.row .goal{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--ink);opacity:.5}
+.row b{text-align:right}.row.sel span{color:var(--blue);font-weight:700}
+.legend{font-size:12px;color:var(--sub);margin-top:10px}
+table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:7px 6px;border-bottom:1px solid var(--line);text-align:right}th{color:var(--sub);font-weight:600}td:first-child,th:first-child{text-align:left}
+.ctrl{display:flex;gap:12px;align-items:center;margin-bottom:12px;background:var(--card);border-radius:14px;padding:10px 16px}
+.ctrl label{font-size:13px;color:var(--sub);font-weight:600;display:flex;gap:8px;align-items:center}
+input[type=range]{accent-color:var(--blue)}
+.note{font-size:12px;color:var(--sub);margin-top:14px}
+@media(max-width:900px){.kpis{grid-template-columns:1fr 1fr}.grid{grid-template-columns:1fr}}
+</style></head><body>
+<header><div><h1>우주구 2026 세출예산 집행률 대시보드</h1><small>기준일 2026. 9. 30. · 단위 천원 · S01 자료를 검산한 값</small></div><span class="tag">교육용 가상 자료</span></header>
+<div class="wrap">
+  <div class="ctrl"><label>목표 집행률 <input type="range" id="goal" min="40" max="90" step="5" value="70"> <b id="goalTxt">70%</b></label><span style="font-size:12px;color:var(--sub)">목표에 못 미친 부서는 주황색으로 표시</span></div>
+  <div class="kpis">
+    <div class="kpi"><small>예산현액</small><b id="kB">0<em>백만원</em></b></div>
+    <div class="kpi"><small>집행액</small><b id="kE">0<em>백만원</em></b></div>
+    <div class="kpi"><small>전체 집행률</small><b id="kR">0<em>%</em></b></div>
+    <div class="kpi"><small>목표 미달 부서</small><b id="kL" style="color:var(--or)">0<em>개</em></b></div>
+  </div>
+  <div class="grid">
+    <div class="card"><h3>부서별 집행률 <span>막대 클릭 시 세부사업 보기</span></h3><div id="bars"></div><div class="legend">세로선 = 목표 집행률</div></div>
+    <div class="card"><h3 id="detT">세부사업 <span>부서를 선택하세요</span></h3><table id="det"></table></div>
+  </div>
+  <p class="note">※ 교육용 가상 자료입니다. S01 원자료의 함정(원 단위 입력, 중복 행, 소계 행)을 바로잡은 값으로 만들었습니다. 실제 업무에 쓰기 전에는 원자료와 다시 대조하십시오.</p>
+</div>
+<script>
+const D=[["기획예산과","구정 주요업무 평가",48000,31200],["기획예산과","주민참여예산 운영",120000,54600],["기획예산과","정책연구 용역",90000,90000],["자치행정과","동 행정복지센터 환경 개선",350000,287000],["자치행정과","주민자치회 운영 지원",84000,61300],["자치행정과","지정게시대 관리",36000,27800],["문화체육과","2026 우주한마당 개최",260000,241500],["문화체육과","우주구민 생활체육대회",95000,93100],["문화체육과","작은도서관 운영",140000,98700],["문화체육과","우주문화센터 리모델링",1200000,744000],["복지정책과","고령 1인가구 안부 지킴이",180000,103800],["복지정책과","찾아가는 복지 상담",75000,52500],["복지정책과","긴급 생계 지원",400000,312400],["노인복지과","경로당 운영 지원",520000,405600],["노인복지과","노인 일자리 사업",1850000,1406000],["노인복지과","치매 예방 프로그램",66000,29700],["안전총괄과","재난 안전 교육",42000,30200],["안전총괄과","지역축제 안전관리",58000,51600],["안전총괄과","생활안전 시설 정비",310000,124000],["환경위생과","생활소음 측정·관리",64000,24300],["환경위생과","재활용 선별장 운영",760000,551000],["환경위생과","무단투기 단속",52000,39500],["건설교통과","보도 정비",900000,486000],["건설교통과","공영주차장 조성",2400000,720000],["건설교통과","어린이 보호구역 개선",280000,198800],["일자리경제과","청년 창업 공간 운영",210000,132300],["일자리경제과","전통시장 활성화",330000,151800],["일자리경제과","소상공인 디지털 전환 지원",150000,45000]];
+const $=id=>document.getElementById(id), fmt=n=>n.toLocaleString();
+const dept={};D.forEach(([d,p,b,e])=>{dept[d]=dept[d]||{b:0,e:0,items:[]};dept[d].b+=b;dept[d].e+=e;dept[d].items.push([p,b,e])});
+let sel=null;
+function tween(el,to,dec,suf){const t0=performance.now(),from=+el.dataset.v||0;el.dataset.v=to;const st=t=>{const k=Math.min(1,(t-t0)/600),v=from+(to-from)*(1-Math.pow(1-k,3));el.firstChild.nodeValue=(dec?v.toFixed(dec):Math.round(v).toLocaleString());if(k<1)requestAnimationFrame(st)};requestAnimationFrame(st)}
+function render(){
+  const goal=+$("goal").value;$("goalTxt").textContent=goal+"%";
+  const tb=D.reduce((s,x)=>s+x[2],0),te=D.reduce((s,x)=>s+x[3],0);
+  tween($("kB"),tb/1000,0);tween($("kE"),te/1000,0);tween($("kR"),te/tb*100,1);
+  const list=Object.entries(dept).map(([d,v])=>[d,v.e/v.b*100]).sort((a,b)=>a[1]-b[1]);
+  tween($("kL"),list.filter(x=>x[1]<goal).length,0);
+  $("bars").innerHTML=list.map(([d,r])=>`<div class="row ${sel===d?"sel":""}" data-d="${d}"><span>${d}</span><div class="tr"><i style="background:${r<goal?"var(--or)":"var(--blue)"}" data-w="${r}"></i><div class="goal" style="left:${goal}%"></div></div><b>${r.toFixed(1)}%</b></div>`).join("");
+  requestAnimationFrame(()=>document.querySelectorAll("#bars i").forEach(i=>i.style.width=i.dataset.w+"%"));
+  if(sel){const v=dept[sel];$("detT").innerHTML=`${sel} 세부사업 <span>예산 ${fmt(v.b)} · 집행 ${fmt(v.e)}</span>`;
+    $("det").innerHTML="<tr><th>세부사업</th><th>예산현액</th><th>집행액</th><th>집행률</th></tr>"+v.items.map(([p,b,e])=>`<tr><td>${p}</td><td>${fmt(b)}</td><td>${fmt(e)}</td><td style="color:${e/b*100<goal?"var(--or)":"inherit"};font-weight:700">${(e/b*100).toFixed(1)}%</td></tr>`).join("")}
+}
+$("bars").addEventListener("click",e=>{const r=e.target.closest(".row");if(r){sel=r.dataset.d;render()}});
+$("goal").oninput=render;sel="건설교통과";render();
+</script></body></html>
